@@ -1,0 +1,8 @@
+{
+  "name": "PyStudio",
+  "description": "Splits code into multiple files and adds terminal input support for interactive execution without changing original program logic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
