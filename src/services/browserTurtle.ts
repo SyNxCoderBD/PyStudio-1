@@ -28,10 +28,10 @@ class _BrowserTurtleScreen:
     def _point(self, x, y):
         return self.width / 2 + float(x), self.height / 2 - float(y)
 
-    def _append(self, owner, element, filled=False):
+    def _append(self, owner, element, filled=False, animated=False):
         if len(self.items) + len(self.fills) >= 20000:
             raise RuntimeError("Turtle drawing limit reached (20,000 shapes).")
-        (self.fills if filled else self.items).append((owner, element))
+        (self.fills if filled else self.items).append((owner, element, animated))
         self.dirty = True
 
     def bgcolor(self, *colors):
@@ -82,25 +82,39 @@ class _BrowserTurtleScreen:
     def mainloop(self):
         _flush_browser_turtle()
 
-    def _svg(self):
+    def _svg(self, animated=False):
         width = int(self.width)
         height = int(self.height)
+        animated_count = sum(1 for _, _, should_animate in self.fills + self.items if should_animate)
+        step_duration = 0.9 / max(1, animated_count)
+        animation_index = 0
         parts = [
             f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
             f'<rect width="100%" height="100%" fill="{_turtle_color(self.background)}"/>'
         ]
-        parts.extend(item for _, item in self.fills)
-        parts.extend(item for _, item in self.items)
-        for turtle in self.turtles:
-            if not turtle.visible:
-                continue
-            x, y = self._point(turtle.x, turtle.y)
-            angle = _turtle_math.radians(turtle.angle)
-            tip = (x + 11 * _turtle_math.cos(angle), y - 11 * _turtle_math.sin(angle))
-            left = (x + 7 * _turtle_math.cos(angle + 2.45), y - 7 * _turtle_math.sin(angle + 2.45))
-            right = (x + 7 * _turtle_math.cos(angle - 2.45), y - 7 * _turtle_math.sin(angle - 2.45))
-            points = " ".join(f"{px:.2f},{py:.2f}" for px, py in (tip, left, right))
-            parts.append(f'<polygon points="{points}" fill="{_turtle_color(turtle.pen_color)}"/>')
+        for collection in (self.fills, self.items):
+            for _, item, should_animate in collection:
+                if animated and should_animate:
+                    tag = item[1:item.find(" ")]
+                    begin = animation_index * step_duration
+                    if tag == "line":
+                        item = item[:-2] + f' pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"><animate attributeName="stroke-dashoffset" from="1" to="0" begin="{begin:.4f}s" dur="{step_duration:.4f}s" fill="freeze"/></line>'
+                    else:
+                        item = item[:-2] + f'><animate attributeName="opacity" from="0" to="1" begin="{begin:.4f}s" dur="{step_duration:.4f}s" fill="freeze"/></{tag}>'
+                    animation_index += 1
+                parts.append(item)
+        if animated:
+            for turtle in self.turtles:
+                if len(turtle._path) < 2:
+                    continue
+                path = " ".join(
+                    ("M" if index == 0 else "L") + f"{self._point(x, y)[0]:.2f},{self._point(x, y)[1]:.2f}"
+                    for index, (x, y) in enumerate(turtle._path)
+                )
+                start_x, start_y = self._point(*turtle._path[0])
+                parts.append(
+                    f'<polygon points="11,0 -7,-5 -7,5" transform="translate({start_x:.2f} {start_y:.2f})" fill="{_turtle_color(turtle.pen_color)}"><animateMotion dur="0.9s" path="{path}" rotate="auto" fill="freeze"/></polygon>'
+                )
         parts.append("</svg>")
         return "".join(parts)
 
@@ -108,7 +122,13 @@ class _BrowserTurtleScreen:
         if not self.dirty:
             return
         encoded = _turtle_base64.b64encode(self._svg().encode("utf-8")).decode("ascii")
-        print("__PY_TURTLE_DATA__:" + _turtle_json.dumps({"svg": encoded, "title": "Turtle drawing"}))
+        animation = _turtle_base64.b64encode(self._svg(animated=True).encode("utf-8")).decode("ascii")
+        print("__PY_TURTLE_DATA__:" + _turtle_json.dumps({
+            "svg": encoded,
+            "animationSvg": animation,
+            "animationDuration": 900,
+            "title": "Turtle drawing"
+        }))
         self.dirty = False
 
 
@@ -125,6 +145,7 @@ class _BrowserTurtle:
         self.line_width = 1.0
         self.pen_down = self.visible = True
         self._fill_points = None
+        self._path = [(self.x, self.y)]
 
     def _move_to(self, x, y):
         x, y = float(x), float(y)
@@ -132,8 +153,9 @@ class _BrowserTurtle:
             x1, y1 = self.screen._point(self.x, self.y)
             x2, y2 = self.screen._point(x, y)
             element = f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" stroke="{_turtle_color(self.pen_color)}" stroke-width="{self.line_width:.2f}" stroke-linecap="round"/>'
-            self.screen._append(id(self), element)
+            self.screen._append(id(self), element, animated=True)
         self.x, self.y = x, y
+        self._path.append((x, y))
         if self._fill_points is not None:
             self._fill_points.append((x, y))
         self.screen.dirty = True
@@ -247,14 +269,14 @@ class _BrowserTurtle:
                 f"{px:.2f},{py:.2f}" for px, py in (self.screen._point(x, y) for x, y in self._fill_points)
             )
             element = f'<polygon points="{points}" fill="{_turtle_color(self.fill_color)}" stroke="{_turtle_color(self.pen_color)}" stroke-width="{self.line_width:.2f}"/>'
-            self.screen._append(id(self), element, filled=True)
+            self.screen._append(id(self), element, filled=True, animated=True)
         self._fill_points = None
 
     def dot(self, size=None, *color):
         radius = max(1.0, float(size if size is not None else self.line_width + 4) / 2)
         x, y = self.screen._point(self.x, self.y)
         fill = _turtle_color(color[0] if color else self.pen_color)
-        self.screen._append(id(self), f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius:.2f}" fill="{fill}"/>')
+        self.screen._append(id(self), f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius:.2f}" fill="{fill}"/>', animated=True)
 
     def write(self, text, move=False, align="left", font=("Arial", 10, "normal")):
         family = _turtle_html.escape(str(font[0]), quote=True) if len(font) > 0 else "Arial"
@@ -264,13 +286,13 @@ class _BrowserTurtle:
         x, y = self.screen._point(self.x, self.y)
         content = _turtle_html.escape(str(text))
         element = f'<text x="{x:.2f}" y="{y:.2f}" fill="{_turtle_color(self.pen_color)}" font-family="{family}" font-size="{size}" font-weight="{weight}" text-anchor="{anchor}">{content}</text>'
-        self.screen._append(id(self), element)
+        self.screen._append(id(self), element, animated=True)
         if move:
             self.forward(len(str(text)) * size * 0.6)
 
     def clear(self):
-        self.screen.items = [(owner, item) for owner, item in self.screen.items if owner != id(self)]
-        self.screen.fills = [(owner, item) for owner, item in self.screen.fills if owner != id(self)]
+        self.screen.items = [(owner, item, animated) for owner, item, animated in self.screen.items if owner != id(self)]
+        self.screen.fills = [(owner, item, animated) for owner, item, animated in self.screen.fills if owner != id(self)]
         self.screen.dirty = True
 
     def reset(self):
@@ -327,6 +349,16 @@ class _BrowserTurtle:
 _browser_turtle_screen = _BrowserTurtleScreen()
 _browser_default_turtle = _BrowserTurtle(_browser_turtle_screen)
 _browser_turtle_screen.dirty = False
+
+def _begin_browser_turtle_execution():
+    _browser_turtle_screen.clear()
+    _browser_turtle_screen.background = "white"
+    _browser_turtle_screen.turtles = [_browser_default_turtle]
+    _browser_default_turtle.screen = _browser_turtle_screen
+    _browser_default_turtle._reset_state()
+    _browser_turtle_screen.dirty = False
+
+
 _browser_turtle_module = _turtle_types.ModuleType("turtle")
 _browser_turtle_module.Turtle = _BrowserTurtle
 _browser_turtle_module.RawTurtle = _BrowserTurtle

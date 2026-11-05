@@ -695,9 +695,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                 updateCursorTracking();
               }
             }}
-            onKeyUp={() => {
+            onKeyUp={(e) => {
               if (!isApplyingRemoteUpdateRef.current) {
                 updateCursorTracking();
+                if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
+                  checkAutocomplete(e.currentTarget.value, e.currentTarget.selectionStart ?? 0);
+                }
               }
             }}
             placeholder="# Write Python code here..."

@@ -13,6 +13,7 @@ import { USER_COLORS } from '../constants/python';
 
 interface MainMenuProps {
   initialRoomNumber?: string;
+  isRoomInvite: boolean;
   userName: string;
   userColor: string;
   onUserNameChange: (name: string) => void;
@@ -29,6 +30,7 @@ const FEATURED_ROOMS = [
 
 export const MainMenu: React.FC<MainMenuProps> = ({
   initialRoomNumber = '',
+  isRoomInvite,
   userName,
   userColor,
   onUserNameChange,
@@ -38,18 +40,27 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const [roomNumber, setRoomNumber] = useState(initialRoomNumber || '101');
   const [errorMsg, setErrorMsg] = useState('');
   const roomInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (window.matchMedia('(pointer: fine)').matches) {
-      roomInputRef.current?.focus();
-    }
-  }, []);
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    (isRoomInvite ? nameInputRef.current : roomInputRef.current)?.focus();
+  }, [isRoomInvite]);
+
+  useEffect(() => {
+    setRoomNumber(initialRoomNumber || '101');
+  }, [initialRoomNumber]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanRoom = roomNumber.trim();
     if (!cleanRoom) {
       setErrorMsg('Please enter a room number or name to continue.');
+      return;
+    }
+    if (isRoomInvite && !userName.trim()) {
+      setErrorMsg('Enter your display name to join this room.');
+      nameInputRef.current?.focus();
       return;
     }
     setErrorMsg('');
@@ -87,7 +98,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <section className="w-full max-w-xl mx-auto">
           <div className="flex items-center justify-center sm:justify-start gap-2 text-[10px] font-mono uppercase text-amber-400 mb-5">
             <span className="w-6 h-px bg-amber-400" />
-            Pairing room / 01
+            {isRoomInvite ? `Joining room / ${roomNumber}` : 'Pairing room / 01'}
           </div>
           <h2 className="font-serif text-center sm:text-left text-5xl sm:text-6xl leading-[0.98] text-slate-100 max-w-lg">
             Code in<br />
@@ -109,6 +120,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   id="room-number"
                   type="text"
                   value={roomNumber}
+                  readOnly={isRoomInvite}
                   onChange={(e) => {
                     setRoomNumber(e.target.value);
                     if (errorMsg) setErrorMsg('');
@@ -120,7 +132,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   type="submit"
                   className="flex items-center gap-2 px-4 sm:px-5 my-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
                 >
-                  Join/create <ArrowRight className="w-4 h-4" />
+                  {isRoomInvite ? 'Join room' : 'Join/create'} <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
               {errorMsg && <p className="text-rose-400 text-xs font-medium">{errorMsg}</p>}
@@ -132,6 +144,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   <User className="w-3.5 h-3.5 text-slate-500" /> Display name
                 </label>
                 <input
+                  ref={nameInputRef}
                   id="display-name"
                   type="text"
                   value={userName}

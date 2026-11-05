@@ -26,6 +26,8 @@ export interface TerminalEntry {
   type: 'stdout' | 'stderr' | 'stdin' | 'prompt' | 'input_line' | 'system' | 'result' | 'plot' | 'download' | 'file_download';
   text: string;
   plotUrl?: string;
+  plotAnimationUrl?: string;
+  plotAnimationDuration?: number;
   plotPdfUrl?: string;
   plotTitle?: string;
   plotFormat?: 'png' | 'svg';

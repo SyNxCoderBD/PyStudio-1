@@ -3,10 +3,11 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { execFile, spawn } from 'child_process';
+import { timingSafeEqual } from 'node:crypto';
 import { createServer as createViteServer } from 'vite';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
@@ -55,6 +56,25 @@ async function ensureYtDlpBinary(): Promise<string> {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+app.use('/api/yt-dlp', (req, res, next) => {
+  const expectedToken = process.env.YTDLP_API_TOKEN;
+  if (!expectedToken) {
+    res.status(503).json({ success: false, error: 'yt-dlp API is disabled until YTDLP_API_TOKEN is configured' });
+    return;
+  }
+
+  const authorization = req.get('authorization') || '';
+  const providedToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1] || '';
+  const expected = Buffer.from(expectedToken);
+  const provided = Buffer.from(providedToken);
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    res.status(401).json({ success: false, error: 'A valid bearer token is required' });
+    return;
+  }
+
+  next();
 });
 
 // yt-dlp version endpoint

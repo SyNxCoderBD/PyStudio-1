@@ -355,9 +355,9 @@ def _emit_file_download_payload(filepath):
         with open(fn, 'rb') as f:
             data_bytes = f.read()
         
-        # Max limit 15MB for real-time broadcast
-        if len(data_bytes) > 15 * 1024 * 1024:
-            print(f"[Download notice]: File '{fn}' is {len(data_bytes)/1024/1024:.1f}MB, exceeds 15MB download broadcast limit.")
+        # Leave room for base64 expansion and Firebase record metadata.
+        if len(data_bytes) > 10 * 1024 * 1024:
+            print(f"[Download notice]: File '{fn}' is {len(data_bytes)/1024/1024:.1f}MB, exceeds 10MB download broadcast limit.")
             return
 
         b64 = base64.b64encode(data_bytes).decode('utf-8')
@@ -454,12 +454,8 @@ class _AsyncExecutionTransformer(ast.NodeTransformer):
         if not isinstance(node, ast.Call):
             return False
         if isinstance(node.func, ast.Attribute):
-            if node.func.attr == 'sleep':
-                if isinstance(node.func.value, ast.Name):
-                    if node.func.value.id in self.time_modules or node.func.value.id in ('time', 'asyncio'):
-                        return True
-                else:
-                    return True
+            if node.func.attr == 'sleep' and isinstance(node.func.value, ast.Name):
+                return node.func.value.id in self.time_modules
         elif isinstance(node.func, ast.Name):
             if node.func.id in self.sleep_names or node.func.id == 'sleep':
                 return True
@@ -519,14 +515,14 @@ class _AsyncExecutionTransformer(ast.NodeTransformer):
         return node
 
 def _collect_async_execution_info(parsed_ast):
-    time_modules = {'time'}
+    time_modules = {'time', 'asyncio'}
     sleep_names = {'sleep'}
     async_functions = set()
 
     for node in ast.walk(parsed_ast):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if alias.name == 'time':
+                if alias.name in ('time', 'asyncio'):
                     time_modules.add(alias.asname or alias.name)
         elif isinstance(node, ast.ImportFrom):
             if node.module in ('time', 'asyncio'):
@@ -538,8 +534,10 @@ def _collect_async_execution_info(parsed_ast):
         if not isinstance(n, ast.Call):
             return False
         if isinstance(n.func, ast.Attribute):
-            if n.func.attr == 'sleep' or n.func.attr in async_functions:
+            if n.func.attr in async_functions:
                 return True
+            if n.func.attr == 'sleep' and isinstance(n.func.value, ast.Name):
+              return n.func.value.id in time_modules
         elif isinstance(n.func, ast.Name):
             if n.func.id == 'input' or n.func.id in sleep_names or n.func.id in async_functions:
                 return True
@@ -587,6 +585,7 @@ async def __execute_collaborative_code(user_code_str, user_globals):
 
     # Parse AST
     parsed = ast.parse(user_code_str, filename="<editor>", mode="exec")
+    _begin_browser_turtle_execution()
     
     time_modules, sleep_names, async_functions, has_async = _collect_async_execution_info(parsed)
             
@@ -602,11 +601,13 @@ async def __execute_collaborative_code(user_code_str, user_globals):
         
         # Flush any active figures that user plotted (even if plt.show() was omitted)
         _flush_matplotlib_figures()
+        _flush_browser_turtle()
         # Check and emit any files written/generated during execution
         _check_and_emit_generated_files(before_files)
         return res
     except Exception as e:
         _flush_matplotlib_figures()
+        _flush_browser_turtle()
         _check_and_emit_generated_files(before_files)
         raise e
 
@@ -651,6 +652,8 @@ def __check_python_syntax(user_code_str):
       window.pyodideInstance = pyodideInstance;
       return pyodideInstance;
     } catch (err) {
+      pyodideInstance = null;
+      initPromise = null;
       console.error("Pyodide initialization failed:", err);
       throw err;
     } finally {

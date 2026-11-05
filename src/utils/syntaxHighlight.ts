@@ -1,5 +1,7 @@
 import { PYTHON_KEYWORDS, PYTHON_BUILTINS } from '../constants/python';
+import { PYTHON_MODULES_MAP } from '../constants/pythonModules';
 import { SyntaxErrorInfo } from '../types';
+import { parsePythonScope } from './pythonAutocomplete';
 
 export interface SelectionRange {
   start: number;
@@ -100,6 +102,10 @@ interface ParsedToken {
     | 'builtin'
     | 'operator'
     | 'punctuation'
+    | 'module'
+    | 'function'
+    | 'className'
+    | 'constant'
     | 'identifier';
   name?: string;
   nameStart?: number;
@@ -169,6 +175,59 @@ export function highlightPythonCode(
       tokens.push({ text: tokenText, start, end, kind: 'punctuation' });
     } else {
       tokens.push({ text: tokenText, start, end, kind: 'identifier' });
+    }
+  }
+
+  const scope = parsePythonScope(code);
+  const importedModuleNames = new Set([
+    ...scope.moduleAliases.keys(),
+    ...scope.moduleAliases.values()
+  ]);
+
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index];
+    if (token.kind !== 'identifier') continue;
+
+    if (importedModuleNames.has(token.text)) {
+      token.kind = 'module';
+      continue;
+    }
+
+    const importedSymbol = scope.importedSymbols.get(token.text);
+    if (importedSymbol) {
+      token.kind = importedSymbol.kind === 'class'
+        ? 'className'
+        : importedSymbol.kind === 'constant'
+          ? 'constant'
+          : importedSymbol.kind === 'module'
+            ? 'module'
+            : 'function';
+      continue;
+    }
+
+    const objectMatch = code.slice(0, token.start).match(/([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\.$/);
+    if (objectMatch) {
+      const objectPath = objectMatch[1];
+      const objectParts = objectPath.split('.');
+      const rootModule = scope.moduleAliases.get(objectParts[0]);
+      const modulePath = rootModule
+        ? [rootModule, ...objectParts.slice(1)].join('.')
+        : objectPath;
+      const member = PYTHON_MODULES_MAP[modulePath]?.symbols.find((symbol) => symbol.name === token.text);
+      if (member) {
+        token.kind = member.kind === 'class'
+          ? 'className'
+          : member.kind === 'constant'
+            ? 'constant'
+            : member.kind === 'module'
+              ? 'module'
+              : 'function';
+        continue;
+      }
+    }
+
+    if (tokens[index + 1]?.text === '(') {
+      token.kind = 'function';
     }
   }
 
@@ -407,6 +466,14 @@ export function highlightPythonCode(
       html += renderSegment(t.text, t.start, 'token-keyword');
     } else if (t.kind === 'builtin') {
       html += renderSegment(t.text, t.start, 'token-builtin');
+    } else if (t.kind === 'module') {
+      html += renderSegment(t.text, t.start, 'token-module');
+    } else if (t.kind === 'function') {
+      html += renderSegment(t.text, t.start, 'token-function');
+    } else if (t.kind === 'className') {
+      html += renderSegment(t.text, t.start, 'token-class-name');
+    } else if (t.kind === 'constant') {
+      html += renderSegment(t.text, t.start, 'token-constant');
     } else if (t.kind === 'operator') {
       html += renderSegment(t.text, t.start, 'token-operator');
     } else if (t.kind === 'punctuation') {

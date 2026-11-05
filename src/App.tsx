@@ -57,6 +57,10 @@ const LoadingScreen = lazy(() => import('./components/LoadingScreen').then(({ Lo
 const USER_KICK_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function App() {
+  const [isRoomInvite] = useState(() =>
+    typeof window !== 'undefined' && Boolean(new URLSearchParams(window.location.search).get('room')?.trim())
+  );
+
   // View mode: 'split' | 'editor' | 'terminal'
   const [viewMode, setViewMode] = useState<WorkspaceViewMode>(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches ? 'editor' : 'split'
@@ -65,7 +69,7 @@ export default function App() {
   // Generate stable local user identity with customizable name and color
   const [currentUser, setCurrentUser] = useState<UserPresence>(() => {
     const id = 'user_' + Math.random().toString(36).substring(2, 7);
-    const name = 'Coder-' + id.substring(5, 8).toUpperCase();
+    const name = isRoomInvite ? '' : 'Coder-' + id.substring(5, 8).toUpperCase();
     const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
     return { id, name, color, online: true };
   });
@@ -788,6 +792,10 @@ export default function App() {
                 type: 'plot',
                 text: `[Turtle Drawing Generated: ${title}]`,
                 plotUrl: `data:image/svg+xml;base64,${payload.svg}`,
+                plotAnimationUrl: payload.animationSvg
+                  ? `data:image/svg+xml;base64,${payload.animationSvg}`
+                  : undefined,
+                plotAnimationDuration: payload.animationDuration || 900,
                 plotTitle: title,
                 plotFormat: 'svg',
                 plotSource: 'turtle',
@@ -974,7 +982,7 @@ export default function App() {
         currentInputRequestId: '',
         isStopped: false
       });
-      setPyStatus('ready');
+      setPyStatus(runtimeInitialized ? 'ready' : 'failed');
     } finally {
       setIsRunning(false);
       setWaitingForInput(false);
@@ -989,6 +997,7 @@ export default function App() {
     return (
       <MainMenu
         initialRoomNumber={roomId}
+        isRoomInvite={isRoomInvite}
         userName={currentUser.name}
         userColor={currentUser.color}
         onUserNameChange={(newName) => setCurrentUser((prev) => ({ ...prev, name: newName }))}

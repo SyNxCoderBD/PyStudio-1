@@ -1,20 +1,18 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# PyStudio
 
-# Run and deploy your AI Studio app
+PyStudio is a collaborative, browser-based Python workspace with a shared editor, terminal, and room chat.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/8a5be1e7-6fe2-487d-890d-eb64b3846b1f
+Prerequisite: Node.js.
 
-## Run Locally
+```sh
+npm install
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+Open `http://localhost:3000`. Python runs in the browser through Pyodide, which is loaded from a CDN. Room collaboration uses the Firebase configuration in `src/services/firebase.ts`.
 
+## Optional yt-dlp API
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+The server's `/api/yt-dlp/*` endpoints are disabled unless `YTDLP_API_TOKEN` is configured in the server environment. Requests must include that value as a bearer token. Do not expose the token in browser code.

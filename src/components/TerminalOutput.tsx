@@ -31,6 +31,39 @@ import {
 import { ExecutionOutput, TerminalEntry } from '../types';
 import { parseAnsiToReact } from '../utils/ansi';
 
+const TurtleDrawingImage: React.FC<{ entry: TerminalEntry; onOpen: () => void }> = ({ entry, onOpen }) => {
+  const duration = entry.plotAnimationDuration || 900;
+  const [isAnimating, setIsAnimating] = useState(() =>
+    Boolean(entry.plotAnimationUrl && Date.now() - entry.timestamp < duration)
+  );
+
+  useEffect(() => {
+    if (!entry.plotAnimationUrl) {
+      setIsAnimating(false);
+      return;
+    }
+    const remaining = duration - (Date.now() - entry.timestamp);
+    if (remaining <= 0) {
+      setIsAnimating(false);
+      return;
+    }
+    setIsAnimating(true);
+    const timer = window.setTimeout(() => setIsAnimating(false), remaining);
+    return () => window.clearTimeout(timer);
+  }, [duration, entry.id, entry.plotAnimationUrl, entry.timestamp]);
+
+  return (
+    <img
+      src={isAnimating && entry.plotAnimationUrl ? entry.plotAnimationUrl : entry.plotUrl}
+      alt={entry.plotTitle || 'Python Turtle drawing'}
+      referrerPolicy="no-referrer"
+      onClick={onOpen}
+      className="max-w-full h-auto object-contain rounded-md cursor-pointer hover:opacity-95 transition-opacity"
+      style={{ maxHeight: '380px' }}
+    />
+  );
+};
+
 interface TerminalOutputProps {
   executionOutput: ExecutionOutput | null;
   terminalEntries: TerminalEntry[];
@@ -74,6 +107,12 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
   const outputEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputFieldRef = useRef<HTMLInputElement>(null);
+  let latestTurtleEntryKey: string | null = null;
+  terminalEntries.forEach((entry, index) => {
+    if (entry.type === 'plot' && entry.plotSource === 'turtle') {
+      latestTurtleEntryKey = entry.id || `entry-${index}`;
+    }
+  });
 
   // Auto-scroll to bottom whenever new entries, output, or input states arrive
   useEffect(() => {
@@ -366,6 +405,9 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
             {/* Render Log Entries in chronological order */}
             {terminalEntries.map((entry, idx) => {
               const entryKey = entry.id || `entry-${idx}`;
+              if (entry.type === 'plot' && entry.plotSource === 'turtle' && entryKey !== latestTurtleEntryKey) {
+                return null;
+              }
 
               // Matplotlib Plot Card
               if (entry.type === 'plot' && entry.plotUrl) {
@@ -447,17 +489,27 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
                       }`}
                       style={{ WebkitOverflowScrolling: 'touch' }}
                     >
-                      <img 
-                        src={entry.plotUrl} 
-                        alt={entry.plotTitle || (isTurtleDrawing ? "Python Turtle drawing" : "Matplotlib Plot")}
-                        referrerPolicy="no-referrer"
-                        onClick={() => {
-                          setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Matplotlib Figure', format: imageFormat });
-                          setZoomScale(1);
-                        }}
-                        className="max-w-full h-auto object-contain rounded-md cursor-pointer hover:opacity-95 transition-opacity"
-                        style={{ maxHeight: '380px' }}
-                      />
+                      {isTurtleDrawing ? (
+                        <TurtleDrawingImage
+                          entry={entry}
+                          onOpen={() => {
+                            setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Python Turtle Drawing', format: imageFormat });
+                            setZoomScale(1);
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={entry.plotUrl}
+                          alt={entry.plotTitle || 'Matplotlib Plot'}
+                          referrerPolicy="no-referrer"
+                          onClick={() => {
+                            setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Matplotlib Figure', format: imageFormat });
+                            setZoomScale(1);
+                          }}
+                          className="max-w-full h-auto object-contain rounded-md cursor-pointer hover:opacity-95 transition-opacity"
+                          style={{ maxHeight: '380px' }}
+                        />
+                      )}
                     </div>
                   </div>
                 );
