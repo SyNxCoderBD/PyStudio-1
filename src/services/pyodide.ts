@@ -15,6 +15,7 @@ declare global {
 import { SyntaxErrorInfo } from '../types';
 import { formatPythonTraceback } from '../utils/formatError';
 import { BROWSER_TURTLE_BOOTSTRAP } from './browserTurtle';
+import type { AutocompleteItem } from '../utils/pythonAutocomplete';
 
 export type PyodideStatus = 'idle' | 'loading' | 'ready' | 'running' | 'failed';
 
@@ -22,6 +23,7 @@ let pyodideInstance: any = null;
 let isInitializing = false;
 let initPromise: Promise<any> | null = null;
 const locallyInstalledPackages = new Set<string>();
+const runtimeModuleMemberCache = new Map<string, AutocompleteItem[]>();
 
 function isStandardLibraryModule(py: any, moduleName: string): boolean {
   try {
@@ -64,6 +66,30 @@ export function markPackageLoadedLocally(packageName: string): void {
 
 export function getLoadedPackagesLocally(): string[] {
   return Array.from(locallyInstalledPackages);
+}
+
+export function getRuntimeModuleAutocomplete(modulePath: string, memberPrefix: string): AutocompleteItem[] | null {
+  if (!pyodideInstance) return null;
+
+  try {
+    let members = runtimeModuleMemberCache.get(modulePath);
+    if (!members) {
+      const getMembers = pyodideInstance.globals.get('__get_module_completions');
+      if (!getMembers) return null;
+      const serialized = getMembers(modulePath);
+      members = JSON.parse(serialized) as AutocompleteItem[];
+      if (members.length > 0) {
+        runtimeModuleMemberCache.set(modulePath, members);
+      }
+    }
+
+    const prefix = memberPrefix.toLowerCase();
+    return members.filter((member) =>
+      member.label.toLowerCase().startsWith(prefix) && member.label.toLowerCase() !== prefix
+    );
+  } catch {
+    return null;
+  }
 }
 
 export async function getPyodideInstance(
@@ -129,6 +155,48 @@ import base64
 
 def __is_stdlib_module(name):
   return name.split('.')[0] in sys.stdlib_module_names
+
+def __get_module_completions(module_path):
+  import importlib
+  import inspect
+  import json
+  try:
+    target = importlib.import_module(module_path)
+  except Exception:
+    return '[]'
+  suggestions = []
+  for name in dir(target):
+    if name.startswith('_'):
+      continue
+    try:
+      value = getattr(target, name)
+    except Exception:
+      continue
+    if inspect.ismodule(value):
+      kind = 'module'
+    elif inspect.isclass(value):
+      kind = 'class'
+    elif callable(value):
+      kind = 'function'
+    else:
+      kind = 'constant' if name.isupper() else 'variable'
+    detail = f'{module_path}.{name}'
+    if kind == 'function':
+      try:
+        detail = f'{name}{inspect.signature(value)}'
+      except Exception:
+        pass
+    doc = inspect.getdoc(value) or ''
+    suggestions.append({
+      'label': name,
+      'insertText': name,
+      'kind': kind,
+      'detail': detail[:180],
+      'doc': doc.splitlines()[0][:240] if doc else ''
+    })
+    if len(suggestions) >= 500:
+      break
+  return json.dumps(suggestions)
 
 # 1. Configure standard environment variables for full ANSI & TrueColor terminal support
 os.environ["TERM"] = "xterm-256color"

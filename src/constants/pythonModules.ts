@@ -12,6 +12,39 @@ export interface ModuleDefinition {
 }
 
 export const PYTHON_MODULES_MAP: Record<string, ModuleDefinition> = {
+  turtle: {
+    name: 'turtle',
+    description: 'Browser-compatible Turtle drawing API; drawings sync to the room terminal',
+    symbols: [
+      { name: 'Turtle', kind: 'class', detail: 'Turtle(shape="classic", undobuffersize=1000, visible=True)', doc: 'Create a browser-rendered turtle pen.' },
+      { name: 'Screen', kind: 'function', detail: 'Screen()', doc: 'Get the shared browser drawing surface.' },
+      { name: 'forward', kind: 'function', detail: 'forward(distance)', doc: 'Move forward by distance.' },
+      { name: 'backward', kind: 'function', detail: 'backward(distance)', doc: 'Move backward by distance.' },
+      { name: 'left', kind: 'function', detail: 'left(angle)', doc: 'Turn left by angle degrees.' },
+      { name: 'right', kind: 'function', detail: 'right(angle)', doc: 'Turn right by angle degrees.' },
+      { name: 'goto', kind: 'function', detail: 'goto(x, y)', doc: 'Move to an absolute position.' },
+      { name: 'circle', kind: 'function', detail: 'circle(radius, extent=360, steps=None)', doc: 'Draw a circle or arc.' },
+      { name: 'penup', kind: 'function', detail: 'penup()', doc: 'Lift the pen so movement does not draw.' },
+      { name: 'pendown', kind: 'function', detail: 'pendown()', doc: 'Lower the pen so movement draws.' },
+      { name: 'pencolor', kind: 'function', detail: 'pencolor(color)', doc: 'Set the pen stroke color.' },
+      { name: 'fillcolor', kind: 'function', detail: 'fillcolor(color)', doc: 'Set the fill color.' },
+      { name: 'color', kind: 'function', detail: 'color(pencolor, fillcolor=None)', doc: 'Set pen and fill colors.' },
+      { name: 'pensize', kind: 'function', detail: 'pensize(width)', doc: 'Set the pen width.' },
+      { name: 'begin_fill', kind: 'function', detail: 'begin_fill()', doc: 'Start recording a filled shape.' },
+      { name: 'end_fill', kind: 'function', detail: 'end_fill()', doc: 'Fill the shape recorded since begin_fill().' },
+      { name: 'dot', kind: 'function', detail: 'dot(size=None, color=None)', doc: 'Draw a circular dot.' },
+      { name: 'write', kind: 'function', detail: 'write(text, move=False, align="left", font=("Arial", 10, "normal"))', doc: 'Draw text at the current position.' },
+      { name: 'bgcolor', kind: 'function', detail: 'bgcolor(color)', doc: 'Set the drawing background color.' },
+      { name: 'screensize', kind: 'function', detail: 'screensize(width=None, height=None, bg=None)', doc: 'Set the drawing canvas size.' },
+      { name: 'setup', kind: 'function', detail: 'setup(width=None, height=None)', doc: 'Set the drawing canvas size.' },
+      { name: 'done', kind: 'function', detail: 'done()', doc: 'Publish the completed drawing to the shared terminal.' },
+      { name: 'speed', kind: 'function', detail: 'speed(speed)', doc: 'Accepted for compatibility; drawing renders at completion.' },
+      { name: 'hideturtle', kind: 'function', detail: 'hideturtle()', doc: 'Hide the turtle marker.' },
+      { name: 'showturtle', kind: 'function', detail: 'showturtle()', doc: 'Show the turtle marker.' },
+      { name: 'position', kind: 'function', detail: 'position()', doc: 'Return the current position.' },
+      { name: 'heading', kind: 'function', detail: 'heading()', doc: 'Return the current heading.' }
+    ]
+  },
   math: {
     name: 'math',
     description: 'Mathematical functions (sin, cos, sqrt, pi, etc.)',
@@ -625,7 +658,7 @@ export const PYTHON_MODULES_MAP: Record<string, ModuleDefinition> = {
 };
 
 export const COMMON_MODULE_NAMES = [
-  'math', 'random', 'sys', 'os', 'os.path', 'json', 'datetime', 'time', 're',
+  'math', 'random', 'sys', 'os', 'os.path', 'json', 'datetime', 'time', 're', 'turtle',
   'collections', 'itertools', 'functools', 'statistics', 'typing', 'numpy',
   'pandas', 'matplotlib', 'matplotlib.pyplot', 'requests', 'colorama', 'termcolor',
   'colored', 'rich', 'rich.console', 'rich.table', 'rich.panel', 'rich.text', 'pyfiglet',

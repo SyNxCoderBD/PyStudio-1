@@ -25,6 +25,13 @@ export interface AutocompleteResult {
   triggerContext: 'dot' | 'import' | 'from' | 'from-import' | 'identifier';
 }
 
+export interface RuntimeModuleCompletionContext {
+  modulePath: string;
+  memberPrefix: string;
+  replaceStart: number;
+  replaceLength: number;
+}
+
 // Built-in function details dictionary
 const BUILTIN_DOCS: Record<string, { detail: string; doc: string; example?: string }> = {
   print: { detail: 'print(*values, sep=" ", end="\\n", file=sys.stdout, flush=False)', doc: 'Prints values to a stream, or to sys.stdout by default.', example: 'print("Hello, world!", sep=" ")' },
@@ -193,6 +200,38 @@ export function parsePythonScope(code: string): ImportedScope {
   return { moduleAliases, importedSymbols, userSymbols };
 }
 
+export function getRuntimeModuleCompletionContext(
+  code: string,
+  cursorPos: number
+): RuntimeModuleCompletionContext | null {
+  const currentLine = code.substring(0, cursorPos).split('\n').pop() || '';
+  const dotMatch = currentLine.match(/([a-zA-Z_][a-zA-Z0-9_.]*)\.([a-zA-Z0-9_]*)$/);
+  if (!dotMatch) return null;
+
+  const objectPath = dotMatch[1];
+  const memberPrefix = dotMatch[2] || '';
+  const scope = parsePythonScope(code);
+  let modulePath = scope.moduleAliases.get(objectPath);
+
+  if (!modulePath) {
+    const parts = objectPath.split('.');
+    const importedRoot = scope.moduleAliases.get(parts[0]);
+    if (importedRoot && parts.length > 1) {
+      modulePath = `${importedRoot}.${parts.slice(1).join('.')}`;
+    } else if (COMMON_MODULE_NAMES.includes(objectPath) || PYTHON_MODULES_MAP[objectPath]) {
+      modulePath = objectPath;
+    }
+  }
+
+  if (!modulePath) return null;
+  return {
+    modulePath,
+    memberPrefix,
+    replaceStart: cursorPos - memberPrefix.length,
+    replaceLength: memberPrefix.length
+  };
+}
+
 /**
  * Main Autocomplete Query Engine
  */
@@ -318,6 +357,10 @@ export function getPythonAutocomplete(code: string, cursorPos: number): Autocomp
 
     const scope = parsePythonScope(code);
     let resolvedModName: string | undefined = scope.moduleAliases.get(objectPath);
+
+    if (!resolvedModName && PYTHON_MODULES_MAP[objectPath]) {
+      resolvedModName = objectPath;
+    }
 
     // If objectPath itself is a submodule of an imported module (e.g. `import os` and typed `os.path.`)
     if (!resolvedModName) {

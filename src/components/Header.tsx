@@ -277,13 +277,13 @@ export const Header: React.FC<HeaderProps> = ({
                 ? `Raise Hand cooldown active (${handRaiseCooldown}s remaining)` 
                 : "Raise Hand: Request others to stop running/waiting so you can edit code (20s cooldown)"
             }
-            className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shrink-0 border ${
+            className={`h-9 px-3 rounded-md text-xs font-semibold flex items-center gap-2 cursor-pointer shrink-0 border ${
               handRaiseCooldown > 0
-                ? 'bg-slate-800/80 text-slate-500 border-slate-800 cursor-not-allowed'
-                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/40 hover:border-amber-500 active:scale-95 shadow-sm shadow-amber-500/10'
+                ? 'bg-slate-800/80 text-slate-500 border-slate-800'
+                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/35 hover:border-amber-400'
             }`}
           >
-            <Hand className={`w-3.5 h-3.5 shrink-0 ${handRaiseCooldown === 0 ? 'text-amber-400 animate-bounce' : 'text-slate-500'}`} />
+            <Hand className={`w-3.5 h-3.5 shrink-0 ${handRaiseCooldown === 0 ? 'text-amber-400' : 'text-slate-500'}`} />
             <span className="text-[11px]">
               {handRaiseCooldown > 0 ? `Wait ${handRaiseCooldown}s` : 'Raise Hand'}
             </span>
@@ -315,7 +315,7 @@ export const Header: React.FC<HeaderProps> = ({
             <MessageSquare className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span className="text-[11px]">Chat</span>
             {unreadChatCount > 0 && !isChatOpen && (
-              <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-slate-900 shrink-0">
+              <span key={unreadChatCount} className="chat-notification-badge absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-slate-900 shrink-0">
                 {unreadChatCount}
               </span>
             )}
@@ -453,7 +453,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button type="button" onClick={onToggleChat} title="Room chat" aria-label="Room chat" className={`w-9 h-9 flex items-center justify-center border rounded-md relative ${isChatOpen ? 'border-amber-500 text-amber-300' : 'border-slate-700 text-slate-300'}`}>
             <MessageSquare className="w-4 h-4" />
-            {unreadChatCount > 0 && !isChatOpen && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[9px] font-bold flex items-center justify-center">{unreadChatCount}</span>}
+            {unreadChatCount > 0 && !isChatOpen && <span key={unreadChatCount} className="chat-notification-badge absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[9px] font-bold flex items-center justify-center">{unreadChatCount}</span>}
           </button>
           {isRunning ? (
             <button type="button" onClick={onForceStop} title="Stop Python execution" aria-label="Stop Python execution" className="flex-1 h-9 flex items-center justify-center gap-2 bg-rose-600 text-white rounded-md text-xs font-semibold">

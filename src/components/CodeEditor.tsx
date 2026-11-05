@@ -14,9 +14,10 @@ import {
 import { UserPresence, SyntaxErrorInfo } from '../types';
 import { PYTHON_KEYWORDS, PYTHON_BUILTINS } from '../constants/python';
 import { highlightPythonCode, getErrorCharRange, SelectionRange } from '../utils/syntaxHighlight';
-import { validatePythonSyntax } from '../services/pyodide';
+import { getRuntimeModuleAutocomplete, validatePythonSyntax } from '../services/pyodide';
 import { 
   getPythonAutocomplete, 
+  getRuntimeModuleCompletionContext,
   AutocompleteItem, 
   AutocompleteResult 
 } from '../utils/pythonAutocomplete';
@@ -54,6 +55,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const prevCodeRef = useRef<string>(code);
   const lastKnownSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const isApplyingRemoteUpdateRef = useRef<boolean>(false);
+  const autocompleteRequestRef = useRef(0);
 
   const [editorSelection, setEditorSelection] = useState<SelectionRange>({ start: 0, end: 0 });
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
@@ -89,6 +91,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   const closeAutocomplete = () => {
+    autocompleteRequestRef.current += 1;
     setAutoBoxPos(null);
     setAutocompleteSuggestions([]);
     setActiveAutoResult(null);
@@ -271,16 +274,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   // Autocomplete Trigger
-  const checkAutocomplete = (currentText: string, selPos: number) => {
-    const result = getPythonAutocomplete(currentText, selPos);
-
-    if (!result || result.suggestions.length === 0) {
-      setAutoBoxPos(null);
-      setAutocompleteSuggestions([]);
-      setActiveAutoResult(null);
-      return;
-    }
-
+  const showAutocomplete = (currentText: string, selPos: number, result: AutocompleteResult) => {
     setAutocompleteSuggestions(result.suggestions);
     setActiveAutoResult(result);
     setSelectedAutoIndex(0);
@@ -320,6 +314,44 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     left = Math.max(8, Math.min(left, containerWidth - popupWidth - 8));
 
     setAutoBoxPos({ top, left });
+  };
+
+  const checkAutocomplete = (currentText: string, selPos: number) => {
+    const requestId = ++autocompleteRequestRef.current;
+    const staticResult = getPythonAutocomplete(currentText, selPos);
+    const context = getRuntimeModuleCompletionContext(currentText, selPos);
+
+    if (staticResult && staticResult.suggestions.length > 0) {
+      showAutocomplete(currentText, selPos, staticResult);
+    } else {
+      setAutoBoxPos(null);
+      setAutocompleteSuggestions([]);
+      setActiveAutoResult(null);
+    }
+
+    if (!context) return;
+
+    window.setTimeout(() => {
+      if (requestId !== autocompleteRequestRef.current) return;
+      const runtimeSuggestions = getRuntimeModuleAutocomplete(context.modulePath, context.memberPrefix);
+      if (requestId !== autocompleteRequestRef.current || !runtimeSuggestions?.length) return;
+
+      const baseResult = staticResult || {
+        suggestions: [],
+        replaceStart: context.replaceStart,
+        replaceLength: context.replaceLength,
+        triggerContext: 'dot' as const
+      };
+      const seen = new Set<string>();
+      const suggestions = [...runtimeSuggestions, ...(staticResult?.suggestions || [])].filter((item) => {
+        const key = item.label.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      showAutocomplete(currentText, selPos, { ...baseResult, suggestions });
+    }, 0);
   };
 
   const applyAutocomplete = (itemToApply: AutocompleteItem) => {

@@ -1071,14 +1071,15 @@ export default function App() {
       />
 
       {/* Main Workspace Area */}
-      <div className={`flex-1 overflow-hidden relative min-h-0 w-full flex ${
+      <div data-view-mode={viewMode} className={`workspace-main flex-1 overflow-hidden relative min-h-0 w-full flex ${
         viewMode === 'split' 
           ? 'flex-col lg:flex-row' 
           : 'flex-col'
       }`}>
         {/* Python Code Editor Container (Persistently mounted) */}
         <div
-          className={`overflow-hidden flex flex-col min-h-0 ${
+          data-pane="editor"
+          className={`workspace-pane overflow-hidden flex flex-col min-h-0 ${
             viewMode === 'editor'
               ? 'flex-1 min-h-0 w-full'
               : viewMode === 'split'
@@ -1100,7 +1101,8 @@ export default function App() {
 
         {/* Interactive Shared Terminal Container (Persistently mounted) */}
         <div
-          className={`overflow-hidden flex flex-col min-h-0 ${
+          data-pane="terminal"
+          className={`workspace-pane overflow-hidden flex flex-col min-h-0 ${
             viewMode === 'editor'
               ? 'shrink-0 w-full'
               : viewMode === 'split'
