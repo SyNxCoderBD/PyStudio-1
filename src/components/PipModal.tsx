@@ -27,7 +27,7 @@ interface PipModalProps {
 }
 
 const POPULAR_PACKAGES = [
-  'colorama', 'termcolor', 'rich', 'numpy', 'sympy', 'pandas', 'matplotlib', 'colored', 'pyfiglet', 'scipy', 'requests'
+  'turtle', 'colorama', 'termcolor', 'rich', 'numpy', 'sympy', 'pandas', 'matplotlib', 'colored', 'pyfiglet', 'scipy', 'requests'
 ];
 
 export const PipModal: React.FC<PipModalProps> = ({ 
@@ -129,7 +129,7 @@ export const PipModal: React.FC<PipModalProps> = ({
               Permanent Room Synchronization
             </span>
             <p className="text-[11px] text-emerald-300/80 leading-relaxed">
-              Pyodide packages and compatible pure-Python wheels sync to everyone in this room. Native packages need a WebAssembly build; desktop GUI modules such as turtle/Tkinter cannot run in browser Python.
+              Pyodide packages and compatible pure-Python wheels sync to everyone in this room. Turtle graphics run in the browser and sync as shared drawings; other native extensions need WebAssembly builds.
             </p>
           </div>
         </div>

@@ -14,6 +14,7 @@ declare global {
 
 import { SyntaxErrorInfo } from '../types';
 import { formatPythonTraceback } from '../utils/formatError';
+import { BROWSER_TURTLE_BOOTSTRAP } from './browserTurtle';
 
 export type PyodideStatus = 'idle' | 'loading' | 'ready' | 'running' | 'failed';
 
@@ -565,6 +566,8 @@ def __check_python_syntax(user_code_str):
         })
 `);
 
+  await pyodideInstance.runPythonAsync(BROWSER_TURTLE_BOOTSTRAP);
+
       // Preload popular color packages (colorama, termcolor, colored) so they work out of the box
       try {
         const micropip = pyodideInstance.pyimport('micropip');
@@ -628,7 +631,7 @@ function extractImportedModules(code: string): string[] {
 async function autoInstallImportedPackages(py: any, code: string, onLog?: (msg: string) => void): Promise<void> {
   const importedModules = extractImportedModules(code);
   if (importedModules.includes('turtle') && onLog) {
-    onLog("[Package Manager] 'turtle' is standard library, not a pip package. Its Tk graphics window is unavailable in browser Pyodide; use matplotlib for browser-compatible plots.");
+    onLog('[Package Manager] Browser Turtle is active; completed drawings will appear in the shared room terminal.');
   }
   const stdlibAndBuiltins = new Set([
     'math', 'random', 'sys', 'os', 'json', 'datetime', 'time', 're',
@@ -813,12 +816,13 @@ export async function installPipPackage(
     const moduleName = packageMatch?.[1] || cleanName;
     const normalizedName = moduleName.toLowerCase();
 
+    if (normalizedName === 'turtle') {
+      markPackageLoadedLocally(moduleName);
+      onLog('✓ Browser Turtle is ready; drawings sync to all room participants.');
+      return true;
+    }
+
     if (isStandardLibraryModule(py, moduleName)) {
-      if (normalizedName === 'turtle') {
-        throw new Error(
-          "'turtle' is part of Python's standard library, not a pip package. Its graphics require Tk desktop windows, which browsers do not provide to Pyodide. Use matplotlib for browser-compatible plots."
-        );
-      }
       throw new Error(`'${moduleName}' is part of Python's standard library and does not need pip installation.`);
     }
 

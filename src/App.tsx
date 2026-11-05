@@ -780,7 +780,23 @@ export default function App() {
       const result = await pyodide.executePythonCode({
         code,
         onStdout: (str: string) => {
-          if (str.startsWith('__PY_PLOT_DATA__:')) {
+          if (str.startsWith('__PY_TURTLE_DATA__:')) {
+            try {
+              const payload = JSON.parse(str.replace('__PY_TURTLE_DATA__:', '').trim());
+              const title = payload.title || 'Turtle drawing';
+              appendTerminalEntry(roomId, {
+                type: 'plot',
+                text: `[Turtle Drawing Generated: ${title}]`,
+                plotUrl: `data:image/svg+xml;base64,${payload.svg}`,
+                plotTitle: title,
+                plotFormat: 'svg',
+                plotSource: 'turtle',
+                timestamp: Date.now()
+              });
+            } catch (err) {
+              console.error('Error sharing Turtle drawing:', err);
+            }
+          } else if (str.startsWith('__PY_PLOT_DATA__:')) {
             const rawData = str.replace('__PY_PLOT_DATA__:', '').trim();
             let pngUrl = rawData;
             let pdfUrl: string | undefined = undefined;
@@ -798,6 +814,8 @@ export default function App() {
               plotUrl: pngUrl,
               plotPdfUrl: pdfUrl,
               plotTitle: title,
+              plotFormat: 'png',
+              plotSource: 'matplotlib',
               timestamp: Date.now()
             });
           } else if (str.startsWith('__PY_FILE_DOWNLOAD__:')) {

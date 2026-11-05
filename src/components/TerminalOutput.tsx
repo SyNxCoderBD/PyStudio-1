@@ -68,7 +68,7 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
   const [copiedLogs, setCopiedLogs] = useState(false);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [plotBgModes, setPlotBgModes] = useState<Record<string, 'dark' | 'light'>>({});
-  const [activeZoomPlot, setActiveZoomPlot] = useState<{ url: string; title: string } | null>(null);
+  const [activeZoomPlot, setActiveZoomPlot] = useState<{ url: string; title: string; format: 'png' | 'svg' } | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
 
   const outputEndRef = useRef<HTMLDivElement>(null);
@@ -119,7 +119,7 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
   const handleCopyLogs = () => {
     const lines = terminalEntries.map((e) => {
       if (e.type === 'plot') {
-        return `[Matplotlib Plot: ${e.plotTitle || 'Figure'}]`;
+        return `[${e.plotSource === 'turtle' ? 'Turtle Drawing' : 'Matplotlib Plot'}: ${e.plotTitle || 'Figure'}]`;
       }
       if (e.type === 'input_line') {
         const line = `${e.promptText || ''}${e.inputValue || e.text}`;
@@ -142,7 +142,7 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
     setTimeout(() => setCopiedLogs(false), 2000);
   };
 
-  const handleDownloadPlot = (url: string, title?: string, format: 'png' | 'pdf' = 'png') => {
+  const handleDownloadPlot = (url: string, title?: string, format: 'png' | 'pdf' | 'svg' = 'png') => {
     const link = document.createElement('a');
     link.href = url;
     const cleanTitle = (title || 'matplotlib_plot').toLowerCase().replace(/\s+/g, '_');
@@ -370,6 +370,8 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
               // Matplotlib Plot Card
               if (entry.type === 'plot' && entry.plotUrl) {
                 const isLight = plotBgModes[entryKey] === 'light';
+                const isTurtleDrawing = entry.plotSource === 'turtle';
+                const imageFormat = entry.plotFormat || 'png';
                 return (
                   <div 
                     key={entryKey} 
@@ -380,7 +382,7 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] px-2 py-0.5 rounded-md font-semibold flex items-center gap-1 font-mono">
                           <LineChart className="w-3 h-3 text-sky-400" />
-                          Matplotlib
+                          {isTurtleDrawing ? 'Python Turtle' : 'Matplotlib'}
                         </span>
                         <span className="text-slate-200 font-medium text-xs truncate max-w-[140px] xs:max-w-xs font-mono">
                           {entry.plotTitle || 'Figure'}
@@ -390,20 +392,20 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
                       {/* Plot Actions Toolbar */}
                       <div className="flex items-center gap-1.5">
                         {/* Toggle Canvas Theme */}
-                        <button
+                        {!isTurtleDrawing && <button
                           type="button"
                           onClick={() => togglePlotBg(entryKey)}
                           title={isLight ? "Switch to dark canvas" : "Switch to crisp white paper canvas"}
                           className="p-1.5 text-slate-400 hover:text-amber-300 hover:bg-slate-700 rounded-md transition cursor-pointer"
                         >
                           {isLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-                        </button>
+                        </button>}
 
                         {/* Fullscreen / Zoom Button */}
                         <button
                           type="button"
                           onClick={() => {
-                            setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Matplotlib Figure' });
+                            setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Matplotlib Figure', format: imageFormat });
                             setZoomScale(1);
                           }}
                           title="Open fullscreen zoom view"
@@ -415,12 +417,12 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
                         {/* Download PNG Button */}
                         <button
                           type="button"
-                          onClick={() => handleDownloadPlot(entry.plotUrl!, entry.plotTitle, 'png')}
-                          title="Download high-resolution plot PNG"
+                          onClick={() => handleDownloadPlot(entry.plotUrl!, entry.plotTitle, imageFormat)}
+                          title={`Download ${isTurtleDrawing ? 'vector SVG drawing' : 'high-resolution plot PNG'}`}
                           className="px-2 py-1 bg-slate-700/80 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-md text-[11px] font-mono flex items-center gap-1 transition cursor-pointer"
                         >
                           <Download className="w-3 h-3" />
-                          <span>PNG</span>
+                          <span>{imageFormat.toUpperCase()}</span>
                         </button>
 
                         {/* Download PDF Button */}
@@ -447,10 +449,10 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
                     >
                       <img 
                         src={entry.plotUrl} 
-                        alt={entry.plotTitle || "Matplotlib Plot"} 
+                        alt={entry.plotTitle || (isTurtleDrawing ? "Python Turtle drawing" : "Matplotlib Plot")}
                         referrerPolicy="no-referrer"
                         onClick={() => {
-                          setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Matplotlib Figure' });
+                          setActiveZoomPlot({ url: entry.plotUrl!, title: entry.plotTitle || 'Matplotlib Figure', format: imageFormat });
                           setZoomScale(1);
                         }}
                         className="max-w-full h-auto object-contain rounded-md cursor-pointer hover:opacity-95 transition-opacity"
@@ -728,12 +730,12 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
               {/* Download PNG */}
               <button
                 type="button"
-                onClick={() => handleDownloadPlot(activeZoomPlot.url, activeZoomPlot.title)}
-                title="Download PNG"
+                onClick={() => handleDownloadPlot(activeZoomPlot.url, activeZoomPlot.title, activeZoomPlot.format)}
+                title={`Download ${activeZoomPlot.format.toUpperCase()}`}
                 className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md transition text-xs font-semibold flex items-center gap-1.5"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">Save</span>
+                <span className="hidden xs:inline">Save {activeZoomPlot.format.toUpperCase()}</span>
               </button>
 
               {/* Close Modal */}

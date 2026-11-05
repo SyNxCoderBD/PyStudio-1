@@ -28,6 +28,8 @@ export interface TerminalEntry {
   plotUrl?: string;
   plotPdfUrl?: string;
   plotTitle?: string;
+  plotFormat?: 'png' | 'svg';
+  plotSource?: 'matplotlib' | 'turtle';
   fileDownload?: {
     filename: string;
     fileSize: number;

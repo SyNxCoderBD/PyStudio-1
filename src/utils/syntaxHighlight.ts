@@ -128,7 +128,7 @@ export function highlightPythonCode(
     : '';
 
   // 1. Tokenize the entire code buffer
-  const fullRegex = /#.*|"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|@[a-zA-Z_][a-zA-Z0-9_]*|\b0x[0-9a-fA-F]+\b|\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b|\b(?:def|class)\s+[a-zA-Z_][a-zA-Z0-9_]*|\b[a-zA-Z_][a-zA-Z0-9_]*\b|[+\-*\/%=&|^~<>!]+|[\(\)\[\]\{\}:;,\.]/g;
+  const fullRegex = /#.*|[rRuUbBfF]{0,2}(?:"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|@[a-zA-Z_][a-zA-Z0-9_]*|(?:0[xX][\da-fA-F](?:_?[\da-fA-F])*|0[bB][01](?:_?[01])*|0[oO][0-7](?:_?[0-7])*|(?:\d(?:_?\d)*)?\.(?:\d(?:_?\d)*)?(?:[eE][+-]?\d(?:_?\d)*)?[jJ]?|\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?(?:[eE][+-]?\d(?:_?\d)*)?[jJ]?)|\b(?:def|class)\s+[a-zA-Z_][a-zA-Z0-9_]*|\b[a-zA-Z_][a-zA-Z0-9_]*\b|:=|[+\-*\/%@=&|^~<>!]+|[\(\)\[\]\{\}:;,\.]/g;
 
   const tokens: ParsedToken[] = [];
   let match: RegExpExecArray | null;
@@ -140,9 +140,9 @@ export function highlightPythonCode(
 
     if (tokenText.startsWith('#')) {
       tokens.push({ text: tokenText, start, end, kind: 'comment' });
-    } else if (tokenText.startsWith('"') || tokenText.startsWith("'")) {
+    } else if (/["']/.test(tokenText)) {
       tokens.push({ text: tokenText, start, end, kind: 'string' });
-    } else if (tokenText.startsWith('@')) {
+    } else if (tokenText.startsWith('@') && tokenText.length > 1) {
       tokens.push({ text: tokenText, start, end, kind: 'decorator' });
     } else if (/^\d/.test(tokenText) || tokenText.startsWith('0x')) {
       tokens.push({ text: tokenText, start, end, kind: 'number' });
@@ -163,7 +163,7 @@ export function highlightPythonCode(
       tokens.push({ text: tokenText, start, end, kind: 'keyword' });
     } else if (PYTHON_BUILTINS.includes(tokenText)) {
       tokens.push({ text: tokenText, start, end, kind: 'builtin' });
-    } else if (/[+\-*\/%=&|^~<>!]/.test(tokenText)) {
+    } else if (/[+\-*\/%@=&|^~<>!]/.test(tokenText)) {
       tokens.push({ text: tokenText, start, end, kind: 'operator' });
     } else if (/[\(\)\[\]\{\}:;,\.]/.test(tokenText)) {
       tokens.push({ text: tokenText, start, end, kind: 'punctuation' });

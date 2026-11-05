@@ -2,15 +2,32 @@ export const PYTHON_KEYWORDS = [
   "and", "as", "assert", "async", "await", "break", "class", "continue",
   "def", "del", "elif", "else", "except", "False", "finally", "for",
   "from", "global", "if", "import", "in", "is", "lambda", "None",
-  "nonlocal", "not", "or", "pass", "raise", "return", "True", "try",
-  "while", "with", "yield"
+  "match", "case", "nonlocal", "not", "or", "pass", "raise", "return",
+  "True", "try", "while", "with", "yield"
 ];
 
 export const PYTHON_BUILTINS = [
-  "print", "len", "range", "input", "str", "int", "float", "list",
-  "dict", "set", "tuple", "type", "open", "sum", "min", "max",
-  "abs", "enumerate", "zip", "super", "isinstance", "map", "filter",
-  "help", "sorted", "reversed", "any", "all", "bin", "hex", "oct"
+  "__debug__", "__import__", "abs", "all", "any", "ascii", "bin", "bool", "breakpoint",
+  "bytearray", "bytes", "callable", "classmethod", "compile", "complex", "delattr", "dict",
+  "dir", "divmod", "enumerate", "eval", "exec", "filter", "float", "format", "frozenset",
+  "getattr", "globals", "hasattr", "hash", "help", "hex", "id", "input", "int", "isinstance",
+  "issubclass", "iter", "len", "list", "locals", "map", "max", "memoryview", "min", "next",
+  "object", "oct", "open", "ord", "pow", "print", "property", "range", "repr", "reversed",
+  "round", "set", "setattr", "slice", "sorted", "staticmethod", "str", "sum", "super", "tuple",
+  "type", "vars", "zip", "Ellipsis", "NotImplemented", "ArithmeticError", "AssertionError",
+  "AttributeError", "BaseException", "BaseExceptionGroup", "BlockingIOError", "BrokenPipeError",
+  "BufferError", "BytesWarning", "ChildProcessError", "ConnectionError", "DeprecationWarning",
+  "EOFError", "Exception", "ExceptionGroup", "FileExistsError", "FileNotFoundError",
+  "FloatingPointError", "FutureWarning", "GeneratorExit", "ImportError", "ImportWarning",
+  "IndentationError", "IndexError", "InterruptedError", "IsADirectoryError", "KeyError",
+  "KeyboardInterrupt", "LookupError", "MemoryError", "ModuleNotFoundError", "NameError",
+  "NotADirectoryError", "NotImplementedError", "OSError", "OverflowError", "PendingDeprecationWarning",
+  "PermissionError", "ProcessLookupError", "RecursionError", "ReferenceError", "ResourceWarning",
+  "RuntimeError", "RuntimeWarning", "StopAsyncIteration", "StopIteration", "SyntaxError",
+  "SyntaxWarning", "SystemError", "SystemExit", "TabError", "TimeoutError", "TypeError",
+  "UnboundLocalError", "UnicodeDecodeError", "UnicodeEncodeError", "UnicodeError",
+  "UnicodeTranslateError", "UnicodeWarning", "UserWarning", "ValueError", "Warning",
+  "ZeroDivisionError"
 ];
 
 export const USER_COLORS = [
